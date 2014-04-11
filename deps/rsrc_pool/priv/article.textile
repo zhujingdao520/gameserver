@@ -1,0 +1,276 @@
+= Resource Pool =
+
+[[File:erlang.png]]
+
+{{CodeSnippet|Code listing 2.2: Create the Agent Information File|<pre>
+sample
+</pre>}}
+<table width="100%" border="0"><tr><td bgcolor="#bbffbb"><p class="note"><b>Note: </b>Control-D to terminate</p></td></tr></table>
+
+== Introduction ==
+
+Reusing resources that have time and memory cost to create can dramatically improve application performance.
+[http://sourceforge.net/projects/erlpool Erlang resource pool] project in Sourceforge was inspired by 
+Apache Commons Pool Java library. API and main functioning principals was borrowed from there, but internal 
+implementation is completely different and is using Erlang OTP design principles and Erlang concurrent model.
+
+== Design ==
+Resource pool consists of two containers: 'Active' and 'Idle'. 'Active' container keeps references to
+resources that are actively used by some processes. Oppositely 'Idle' container keeps resources that are not
+used anywhere and they are in inactive state but ready to use.
+
+      +-Pool-----------{0,0}-+
+      |                      |
+      | Active--+  Idle----+ |
+      | |       |  |       | |
+      | |       |  |       | |
+      | |       |  |       | |
+      | +-------+  +-------+ |
+      +----------------------+
+
+We will use a diagram below to explain operations with pool in following text. Symbols in right of first
+line <code>-{0,0}-</code> show the load of containers: <code>-{N_active,N_idle}-</code>, where:<br/>
+<code>N_active</code> - number of active resorces;<br/>
+<code>N_idle</code> - number of idle resources.
+
+== Operations ==
+
+First thing we have to do is create an instance of resource pool.
+
+{.{CodeSnippet|Listing 1: Create resource pool|<pre>
+  {ok, Pid} = resource_pool:new(test_pool, resource_factory, resource_metadata)
+</pre>}}
+
+<code>test_pool</code> is a registered name for the new pool and <code>resource_factory</code> is a name of a module 
+that implements resource_factory behaviour. Now we can use <code>test_pool</code>
+or <code>Pid</code> as a reference to pool instance. Resource factory module will be responsable for creating, checking and disposing
+resource instances and is discussed in details in [[#Resource factory]] below.
+
+The common use of the resource pool is when a few concurrently running processes shares the same pool to borrow resources from it.
+
+=== borrow ===
+To retrieve a resource from pool process has to call function <code>borrow</code>.
+
+{.{CodeSnippet|Listing 2: Borrow resource from the pool|<pre>
+  Resource = resource_pool:borrow(test_pool)
+</pre>}}
+
+If Idle list is empty the pool creates new resource and grants it to calling process.
+      +-Pool-----------{1,0}-+          +-Pool-----------{2,0}-+
+      |                      |          |                      |
+      | Active--+  Idle----+ |          | Active--+  Idle----+ |
+      | |       |  |       | |          | |       |  |       | |
+      | |       |  |       | |    =>    | | <R.2> |  |       | |
+      | | <R.1> |  |       | |          | | <R.1> |  |       | |
+      | +-------+  +-------+ |          | +-------+  +-------+ |
+      +----------------------+          +----------------------+
+
+If the pool has idle resource within an idle resource just transfers to Active list and
+it is granted to caling process.
+      +-Pool-----------{1,2}-+          +-Pool-----------{2,1}-+
+      |                      |          |                      |
+      | Active--+  Idle----+ |          | Active--+  Idle----+ |
+      | |       |  |       | |          | |       |  |       | |
+      | |       |  | <R.2> | |    =>    | | <R.2> |  |       | |
+      | | <R.1> |  | <R.3> | |          | | <R.1> |  | <R.3> | |
+      | +-------+  +-------+ |          | +-------+  +-------+ |
+      +----------------------+          +----------------------+
+
+=== return ===
+Process has to return a resource to the pool after the process completes using a resource.
+In other words the resource is moved from Active list to Idle list. Now other concurrent 
+processes can borrow freed resource from the pool.
+      +-Pool-----------{2,1}-+          +-Pool-----------{1,2}-+
+      |                      |          |                      |
+      | Active--+  Idle----+ |          | Active--+  Idle----+ |
+      | |       |  |       | |          | |       |  |       | |
+      | | <R.2> |  |       | |    =>    | |       |  | <R.2> | |
+      | | <R.1> |  | <R.3> | |          | | <R.1> |  | <R.3> | |
+      | +-------+  +-------+ |          | +-------+  +-------+ |
+      +----------------------+          +----------------------+
+
+=== add ===
+Sometimes we need just add new resource to pool. Function <code>add</code> creates new resource and
+puts it into Idle list. 
+      +-Pool-----------{2,1}-+          +-Pool-----------{2,2}-+
+      |                      |          |                      |
+      | Active--+  Idle----+ |          | Active--+  Idle----+ |
+      | |       |  |       | |          | |       |  |       | |
+      | | <R.2> |  |       | |    =>    | | <R.2> |  | <R.4> | |
+      | | <R.1> |  | <R.3> | |          | | <R.1> |  | <R.3> | |
+      | +-------+  +-------+ |          | +-------+  +-------+ |
+      +----------------------+          +----------------------+
+
+=== invalidate ===
+If resource failed process has to let know about it to the pool. <code>invalidate</code> function marks failed resource
+as unusable and pool will be destroy it shortly.
+      +-Pool-----------{2,1}-+          +-Pool-----------{1,1}-+
+      |                      |          |                      |
+      | Active--+  Idle----+ |          | Active--+  Idle----+ |
+      | |       |  |       | |          | |       |  |       | |
+      | | <R.2> |  |       | |    =>    | |       |  |       | |
+      | | <R.1> |  | <R.3> | |          | | <R.1> |  | <R.3> | |
+      | +-------+  +-------+ |          | +-------+  +-------+ |
+      +----------------------+          +----------------------+
+
+=== typical use case ===
+Suppose that <code>resource</code> module implements some operations under resource.
+
+{.{CodeSnippet|Listing 3: Typical use case of a resource pool|<pre>
+  case resource_pool:borrow(test_pool) of
+    {error, E} -> io:format("Error while borrow from pool, reason: ~p", [E]);
+    Resource ->
+      try
+        resource:operation(Resource),
+        resource_pool:return(test_pool, Resource)
+      catch
+        _:_ -> resource_pool:invalidate(test_pool, Resource)
+      end,
+  end
+</pre>}}
+
+If everything is going well we see flow like this: borrow --> use --> return. When something wrong is happened during 
+resource use then we have other flow: borrow --> use --> invalidate. 
+== Size limits ==
+We can setup some features and parameters for a resource pool during instantiation by using <code>option</code> parameter
+of <code>new</code> operation (see [[#new]]):
+<pre>
+  {ok, Pid} = resource_pool:new(test_pool, resource_factory, resource_metadata, options)
+</pre>
+<code>Options</code> list contains a few values describing scales, limitation and behavior of a pool. Some of them are
+resposible for size of Active and Idle containers:
+<pre>
+ max_active,
+ max_idle,
+ min_idle
+</pre>
+
+             +-Pool-----------{0,0}-+
+             |                      |
+             | Active--+  Idle----+ |
+             | |       |  |_______|_|__ max_idle
+ max_active__|_|_______|  |       | |
+             | |       |  |       | |
+             | |       |  |_______|_|__ min_idle
+             | |       |  |       | |
+             | +-------+  +-------+ |
+             +----------------------+
+
+=== max_active ===
+Maximum size of Active list is 8 by default. If it reaches the limit following <code>borrow</code> operation will be blocked or 
+failed (see [[#Borrow with exhausted pool]] for details). The value -1 (or any negative) means no limitation on Active list size.
+Example of use: 
+<pre>
+  {ok, Pid} = resource_pool:new(test_pool, resource_factory, [], [{max_active, 20}])
+</pre>
+=== max_idle ===
+Maximum size of Idle list equals max_active by default. If it reaches the limit then following <code>return</code> operation 
+will be finished with destroying of the returned resource. The value -1 (or any negative) means no limitation on Idle list maximum size.
+Example of use: 
+<pre>
+  {ok, Pid} = resource_pool:new(test_pool, resource_factory, [], [{max_active, 20}, {max_idle, 10}])
+</pre>
+=== min_idle ===
+Minimum size of Idle list is 0 by default. If it reaches the limit then following <code>borrow</code> operation will
+successfully supplies a resource to invoker and then pool will additionally create new resource in Idle container to provide 
+min_idle condition. The value -1 (or any negative) means no limitation on Idle list minimum size.
+Example of use: 
+<pre>
+  {ok, Pid} = resource_pool:new(test_pool, resource_factory, [], [{max_active, 20}, {max_idle, 10}, {min_idle, 3}])
+</pre>
+== Behaviour options ==
+=== Borrow with exhausted pool ===
+When we set max_active greater then 0 and size of Active list reaches this value then the pool is exhausted and pool's behaivior 
+depends on when_exhausted_action option value:
+
+; {when_exhausted_action, fail} : <code>borrow</code> function on exhausted pool returns {error, pool_exhausted}.
+; {when_exhausted_action, block} : <code>borrow</code> function on exhausted pool is blocked until a new or idle object is available. 
+: Waiting time period limited  by value of other option max_wait (see [[#Timing]]).
+; {when_exhausted_action, grow}  : <code>borrow</code> function on exhausted pool returns new resource and size of Active Idle grows.
+: In this case max_Idle option is just ignored.
+Default value is '''block'''. 
+Example of use: 
+<pre>
+  {ok, Pid} = resource_pool:new(test_pool, resource_factory, [], [{max_active, 20}, {when_exhausted_action, fail}])
+</pre>
+ 
+=== Resource checking ===
+Resource pool can check status of managed resources. Options <code>test_on_borrow</code> and <code>test_on_return</code>
+control how pool tests resources: before providing resource to invoker '''{test_on_borrow, true}''' and after a resource was returned
+to pool '''{test_on_return, true}'''. If pool finds that the resource is not alive during test then the resource will be destroyed.
+
+=== Resource order in idle container ===
+Option <code>fifo</code> (first-input-first-output) controls order of extracting a resources from Idle list. Diagrams below illustrate this. Suppose we
+fill out Idle list in order: <R.1> was first, <R.2> is next, then <R.3>. Resource <R.4> is active in given moment. If
+'''{fifo, true}''' is set the <code>borrow</code> operation leads to situation below: resource <R.1> was came first and
+it becames active now (first out).  
+      +-Pool-----------{1,2}-+          +-Pool-----------{2,1}-+
+      |                      |          |                      |
+      | Active--+  Idle----+ |          | Active--+  Idle----+ |
+      | |       |  | <R.3> | |          | |       |  |       | |
+      | |       |  | <R.2> | |    =>    | | <R.1> |  | <R.3> | |
+      | | <R.4> |  | <R.1> | |          | | <R.4> |  | <R.2> | |
+      | +-------+  +-------+ |          | +-------+  +-------+ |
+      +----------------------+          +----------------------+
+
+If '''{fifo, false}''' is set it means that order will be last-input-first-output. <code>borrow</code> operation makes active resource
+<R.3> (last input).
+      +-Pool-----------{1,2}-+          +-Pool-----------{2,1}-+
+      |                      |          |                      |
+      | Active--+  Idle----+ |          | Active--+  Idle----+ |
+      | |       |  | <R.3> | |          | |       |  |       | |
+      | |       |  | <R.2> | |    =>    | | <R.3> |  | <R.2> | |
+      | | <R.4> |  | <R.1> | |          | | <R.4> |  | <R.1> | |
+      | +-------+  +-------+ |          | +-------+  +-------+ |
+      +----------------------+          +----------------------+
+Default value for <code>fifo</code> is <code>false</code>.
+
+=== Timing ===
+<code>max_wait</code> option defines the maximum amount of time to wait when the <code>borrow</code> function is invoked,
+the pool is exhausted and <i>when_exhausted_action</i> equals <code>block</code>.
+
+<code>max_idle_time</code> option defines non terminated period of time an resource instance may sit idle in the pool, 
+with the extra condition that at least <code>min_idle</code> amount of object remain in the pool. No resources 
+will be evicted from the pool due to maximum idle time limit if <code>max_idle_time</code> equals '''infinity'''.
+
+== Maintenance of pool instance ==
+=== new ===
+Lets look more closely at resource pool instantiation.
+{.{CodeSnippet|Listing 1: Create an resource pool|<pre>
+  {ok, Pid} = resource_pool:new(pool_name, resource_factory, resource_metadata)
+</pre>}}
+
+=== clear ===
+{.{CodeSnippet|Listing 1: Clear an resource pool|<pre>
+  ok = resource_pool:clear(pool_name)
+</pre>}}
+=== close ===
+{.{CodeSnippet|Listing 1: Close an resource pool|<pre>
+  ok = resource_pool:close(pool_name)
+</pre>}}
+=== get_num_active, get_num_idle, get_number ===
+
+== Resource factory ==
+Before we do not go in details of an resources managed by pool. We was thinking about its as abstract resource without any
+features and properties. It is not true in reality. Real resources (as connections, sockets, channels and so on) are living in pool
+are composed objects with number of properties and they have an life cycle: we have to create them, test, use and dispose them.
+Resource factory separate pool functionality from managed resources functionality and allows to easy customize pool for
+different types of resources.
+
+<code>resource_factory</code> module defines '''behavior''' of generic resource factory. We have to implement this 
+'''behavior''' while designing of resource factory module for given resource. The module has to consist following functions:
+
+; <code>create(Resource_metadata::term())</code> : The function creates new instance of the resource. In Erlang word this is a new
+: process in most cases. <code>Resource_metadata</code> is a data structure that describes an resource. <code>Resource_metadata</code> came
+: to the pool from <code>new</code> operation and it has to be enough to create and manage the resource. Structure and contain of
+: the <code>Resource_metadata</code> is custom and it is used only by <code>resource_factory</code> but is kept as a pool state.
+; <code>destroy(Resource_metadata::term(), Resource::pid())</code> : The function destroys the resource represented by <code>Resource</code> as a '''pid'''.
+; <code>validate(Resource_metadata::term(), Resource::pid())</code> : The function check an <code>Resource</code> and returns true if the resource is valid.
+; <code>activate(Resource_metadata::term(), Resource::pid())</code> : The function is callback that is fired when pool are moving <code>Resource</code> from
+: passive state to active (from idle list to active list).
+; <code>passivate(Resource_metadata::term(), Resource::pid())</code> : The function is callback that is fired when pool are moving <code>Resource</code> from
+: active state to passive (from active list to idle list).
+
+== Examples ==
+=== Connection pool for MySQL driver ===
+=== Channel pool for Rabbit MQ connection ===

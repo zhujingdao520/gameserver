@@ -1,0 +1,39 @@
+To build this code, run the following command:
+
+erlc *.erl
+
+To run the program, start Erlang (in the same directory),
+then run the following in the Erlang shell:
+
+1> tr_server:start_link().
+{ok,<0.34.0>}
+2> 
+
+After that, open another terminal window and use telnet
+to connect to the application, like this:
+
+$ telnet localhost 1055
+Trying 127.0.0.1...
+Connected to localhost.localdomain.
+Escape character is '^]'.
+lists:reverse([1,2,3]).
+[3,2,1]
+init:stop().
+ok
+Connection closed by foreign host.
+
+1、多波怪的实现(最多3波怪)
+	1、有个战斗成员管理类，每当有一方阵营战败。将获取战败方的下一波战斗成员的数据，胜方则
+	保存原有的战斗成员数据，直到有一方没有战斗成员时则结束战斗。
+	2、而每波战斗最多只有20个回合，超过则玩家战斗失败。
+	
+2、战斗过程中增加、删除、替换、播放剧情等实现	
+	1、把增加、删除等行为看一个个动作。同时继承ActionBase 类，类中有个虚函数Run().
+	  所有子类必须继承实现。根据不同的动作处理不同逻辑。
+	2、这些动作都是在战斗每个回合结束以后，检测怪物身上是否带有剧情任务并判断是否已经完成。
+		根据怪物当前HP 或 回合数判断是否要触发剧情。当剧情触发以后创建行为动作(增加、删除等)
+		并调用Run() 执行动作，并把剧情设置为已完成状态。
+	3、这些动作可以支持  删除|播放剧情|增加 等多个动作的组合
+	
+
+

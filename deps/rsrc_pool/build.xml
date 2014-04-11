@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ====================================================================== 
+		                            erl.rsrc.pool
+     ====================================================================== -->
+<project name="erl.rsrc.pool" default="default">
+	<description></description>
+	<property environment="env"/>
+	<property name="rebar-path" value="/usr/local/bin"/>
+
+	<!--=================================
+				target: default
+			=================================-->
+	<target name="default" depends="compile, eunit, clean" description="">
+	</target>
+
+  <target name="compile" depends="" description="">
+    <echo>${env.PATH}</echo>
+  	<exec executable="${rebar-path}/rebar" dir="${basedir}">
+      <env key="PATH" path="${env.PATH}:${rebar-path}"/>
+      <arg line="compile"/>
+    </exec> 
+  </target>
+
+  <target name="eunit" depends="" description="">
+    <exec executable="${rebar-path}/rebar" dir="${basedir}">
+      <env key="PATH" path="${env.PATH}:${rebar-path}"/>
+      <arg line="eunit"/>
+    </exec> 
+  </target>
+
+  <target name="clean" depends="" description="">
+    <exec executable="${rebar-path}/rebar" dir="${basedir}">
+      <env key="PATH" path="${env.PATH}:${rebar-path}"/>
+      <arg line="clean"/>
+    </exec> 
+  </target>
+
+</project>
