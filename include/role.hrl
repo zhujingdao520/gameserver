@@ -1,4 +1,6 @@
 
+-include("pos.hrl").
+
 %% 连接器
 -record(link, {
     %% 套接字
@@ -52,6 +54,8 @@
     ,account = <<>>     ::binary()
     ,zone_id = 0        ::integer()
     ,create_itme = 0    ::integer()
+    ,status = 0         ::integer()
+    ,speed = 0          ::integer()
     ,skill_data         ::tuple()
     ,equip_data         ::tuple()
     ,knapsact           ::tuple()

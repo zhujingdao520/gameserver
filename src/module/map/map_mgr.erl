@@ -17,6 +17,7 @@
     start_link/0
     ,create/1
     ,get_scene/1
+    ,role_enter/4
 ]).
 
 -record(state, {next_id = 10000}).%% 1W以上是主场景
@@ -111,9 +112,9 @@ get_scene(MapID) ->
 %% 跨节点查找
 
 %% @doc 角色进入场景
--spec role_enter(tuple(), #role{}) -> {ok, #role{}}.
-role_enter({MapID, X, Y}, Role) ->
-    Ret = case map_mgr:get_scene(MapID) of
+-spec role_enter(integer(), integer(), integer(), #role{}) -> {ok, #role{}}.
+role_enter(MapID, X, Y, Role) ->
+    Ret = case get_scene(MapID) of
         {error, undefined} -> {error, Role};
         {ok, Map} ->
             case role_condition:check(Map#map.condition, Role) of
@@ -135,7 +136,6 @@ role_enter({MapID, X, Y}, Role) ->
 do_enter(X, Y, Map, Role) ->
     %% 离开上个场景
     {ok, Role1} = role_levae(Role),
-
     %% 更玩家场景信息
     NewRole = Role1#role{
         scene = #pos{
@@ -144,11 +144,31 @@ do_enter(X, Y, Map, Role) ->
                 ,scene_y = Y
                 }
     },
-    {ok, MapRole} = role_transform:transform_map_role(Role1)
+
+    %% 转成场景信息
+    {ok, MapRole} = role_transform:to(map_role, Role1),
     %% 更玩家在地图的信息
     NMapRole = MapRole#map_role{map = Map, x = X, y = Y},
     %%  进入地图
-    Map#map.pid ! {role_enter, NMapRole},
+    map:enter(role, Map#map.pid, NMapRole),
+    {ok, NewRole}
+.
+
+%% @doc 离开场景
+-spec role_levae(#role{}) -> {ok, #role{}}.
+role_levae(Role = #role{scene = #pos{scene_id = Scene_id, scene_x = X, scene_y = Y}}) ->
+    {ok, NewRole} = case get_scene(Scene_id) of
+        {ok, Map} ->
+            %% 记录last 场景信息
+            NewRole1  = Role#role{scene = #pos{last = #pos_history{scene_id = Scene_id, scene_x = X, scene_y = Y}}},
+            %% 离开场景
+            map:leave(Map#map.pid, NewRole1#role.pid),
+            {ok, NewRole1};
+        _ ->
+            ?INFO("[map_mgr:role_levae Scene_Not_Exist][user[~p ~p] scene_id:~p]"
+                ,[Role#role.user_id, Role#role.name, Scene_id]),
+            {ok, Role}
+    end
     {ok, NewRole}
 .
 

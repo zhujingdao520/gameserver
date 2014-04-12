@@ -4,10 +4,10 @@
 
 -include("role.hrl").
 -include("map.hrl").
+-include("common.hrl").
 
-
--spec transform_map_role(#role{}) -> #map_role{}.
-transform_map_role(Role) ->
+-spec to(atom(), #role{}) -> #map_role{}.
+to(map_role,Role) ->
     MapRole = #map_role{
         pid = Role#role.pid
         ,rid = Role#role.user_id
@@ -30,6 +30,11 @@ transform_map_role(Role) ->
         ,mp_max = 1
         },
     {ok, MapRole}
+;
+
+%% 匹配失败
+to(Match, _Role) ->
+    ?INFO("[role_transform:to error][not_match:~p]",[Match])
 .
 
 
