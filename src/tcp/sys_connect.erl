@@ -140,8 +140,10 @@ call(connector, Code, ModName, Data, State = #conn{socket = Socket}) ->
             {ok, State}
     end;
 call(object, _Code, _ModName, _Data, State = #conn{object = undefined}) ->
+    ?INFO("[sys_connect:call not_find_object]"),
     {ok, State};
 call(object, _Code, _ModName, _Data, State = #conn{obj_pid = undefined}) ->
+    ?INFO("[sys_connect:call not_find_obj_pid]"),
     {ok, State};
 call(object, Code, ModName, Data, State = #conn{object = Object, obj_pid = Pid}) ->
      Object:rpc(Pid, Code, ModName, Data),

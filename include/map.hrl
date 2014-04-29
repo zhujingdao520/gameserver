@@ -9,8 +9,8 @@
 %%----------------------------------------------------
 
 %% 网格大小定义
--define(GRID_WIDTH, 600).
--define(GRID_HEIGHT, 340).
+-define(GRID_WIDTH, 60).
+-define(GRID_HEIGHT, 30).
 
 %% 区块格子大小定义
 -define(TILE_WIDTH, 60).

@@ -15,12 +15,15 @@
 %% API
 -export([
     start_link/1
-
+    ,enter/3
+    ,leave/3
+    ,role_move/3
 ]).
 
+% -include("pos.hrl").
+-include("role.hrl").
 -include("map.hrl").
 -include("common.hrl").
-
 
 start_link(Map) ->
     gen_server:start_link(?MODULE, [Map], [])
@@ -57,6 +60,14 @@ leave(_, _Pid, _Msg) ->
     ok
 .
 
+%% -------------------------------------------
+%% @doc 角色移动
+%% -------------------------------------------
+-spec role_move(#role{}, integer(), integer()) -> ok.
+role_move(#role{pid = Pid, scene = #pos{map_pid = MapPid}}, TX, TY) ->
+    MapPid ! {role_move, Pid, TX, TY}
+.
+
 %% ------------------------------------------------------
 %% Callback
 %% ------------------------------------------------------
@@ -89,6 +100,19 @@ handle_cast(_Request, State) ->
     {noreply, State}
 .
 
+%% 角色移动
+handle_info({role_move, Pid, TX, TY}, Map) ->
+    TX1 = ?DX(TX, Map#map.width),
+    TY1 = ?DY(TY, Map#map.height),
+
+    %% 更玩家在场景信息
+    MapRole = #map_role{x = SX, y = SY} = get({role, Pid}),
+    put({role, Pid}, MapRole#map_role{x = TX1, y = TY1}),
+
+    Map#map.grid_pid ! {role_move, MapRole#map_role.rid, SX, SY, TX1, TY1},
+    %% 更新玩家当前场景坐标
+    MapRole#map_role.pid ! {attr, {pos, TX, TY}},
+    {noreply, Map};
 %% 角色进入场景
 handle_info({role_enter, MapRole}, Map) ->
     {ok, NewMap} = case get({role, MapRole#map_role.pid}) of
@@ -114,6 +138,11 @@ handle_info({role_enter, MapRole}, Map) ->
             sync(NewMap1),
 
             %% 通知客户端玩家进入场景
+            {ok, Bin} = proto_10:pack(srv, 1020, {Map#map.id, MapRole#map_role.platform_id
+                , MapRole#map_role.zone_id}),
+            role:send(MapRole#map_role.pid, Bin),
+
+            %% 把场景其他单位信息发给客户端
 
             {ok, NewMap1};
         _ ->
@@ -128,18 +157,19 @@ handle_info({role_levae, RolePid}, Map) ->
         undefined ->
             ?INFO("[map:role_levae RoleNotExist]"),
             {ok, Map};
-        MapRole ->
+        #map_role{rid = RoleID, platform_id = Platform, zone_id = ZoneID
+            , x = X, y = Y} ->
             %% 移除玩家在进程字典数据
             erlang:erase({role, RolePid}),
             %% 离开格子
-            map_grid:leave(Map#map.grid_pid, MapRole),
+            map_grid:leave(Map#map.grid_pid, RoleID, Platform, ZoneID, X, Y),
             %% 场景人数减少
             NewMap1 = Map#map{num = Map#map.num - 1},
             %% 更新场景列表
             sync(NewMap1),
 
             {ok, NewMap1}
-    end
+    end,
     {noreply, NewMap};
 handle_info(_Info, State) ->
     {noreply, State}

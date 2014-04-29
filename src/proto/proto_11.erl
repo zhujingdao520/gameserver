@@ -36,9 +36,11 @@ pack(cli, 1105, {V1_name, V1_classes}) ->
     >>,
     {ok, protocol:pack(1105, Data)};
 
-pack(srv, 1105, {V1_result}) ->
+pack(srv, 1105, {V2_id, V2_platform_id, V2_zone_id}) ->
     Data = <<
-        V1_result:16/signed
+        V2_id:32,
+        V2_platform_id:16,
+        V2_zone_id:16
     >>,
     {ok, protocol:pack(1105, Data)};
 
@@ -87,8 +89,10 @@ unpack(srv, 1105, _B1) ->
     {ok, {V1_name, V1_classes}};
 
 unpack(cli, 1105, _B1) ->
-    {V1_result, _B2} = protocol:int16(_B1),
-    {ok, {V1_result}};
+    {V1_R1, _B2} = protocol:int32(_B1),
+    {V2_platform_id, _B3} = protocol:int16(_B2),
+    {V2_zone_id, _B4} = protocol:int16(_B3),
+    {ok, {V1_R1, V2_platform_id, V2_zone_id}};
 
 unpack(srv, 1120, _B1) ->
     {V1_id, _B2} = protocol:uint32(_B1),

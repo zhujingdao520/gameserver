@@ -20,6 +20,8 @@
     create/1
     ,rpc/4
     ,disconnect/1
+    ,send/2
+    ,send/3
     ]).
 
 create([RoleId, Account, Plat_id, Zone_id, Link]) ->
@@ -56,7 +58,7 @@ init([RoleId, Account, Plat_id, Zone_id, Link]) ->
             Role = #role{
                 pid = self()
                 ,user_id = ID
-                ,name = Name
+                ,name = list_to_binary(Name)
                 ,level = Level
                 ,exp = Exp
                 ,job = Job
@@ -89,9 +91,12 @@ init([RoleId, Account, Plat_id, Zone_id, Link]) ->
 
             process_flag(trap_exit, true),
             link(Link#link.pid),
+            %% 通知客户端进入成功
+            role:send(self(), 1120, {1}),
 
             %% 玩家数据更新
             erlang:send_after(330, self(), update),
+
             %% log玩家登陆成功
             ?INFO("[init Succ] [user_id:~p account:~p platform_id:~p zone_id:~p]",
                 [RoleId, Account, Plat_id, Zone_id]),
@@ -113,8 +118,8 @@ handle_info({'Exit', _Pid, _Reason}, State) ->
     {stop, normal, State};
 
 %% @doc 玩家数据更新
-handle_info(update, State = #role{user_id = RoleId}) ->
-    ?INFO("[handle_info update][user_id:~p]", [RoleId]),
+handle_info(update, State = #role{user_id = _RoleId}) ->
+    % ?INFO("[handle_info update][user_id:~p]", [RoleId]),
     erlang:send_after(330, self(), update),
     {noreply, State};
 
@@ -124,16 +129,20 @@ handle_info({send_data, Msg}, State = #role{link = #link{pid = Pid}}) ->
     Pid ! {send_data, Msg},
     {noreply, State};
 
-%% @doc 收到不效消息
-handle_info(_Info, State) ->
-    {noreply, State}.
-
 %% @doc rpc
-handle_cast({rpc, Code, ModName, Data}, State) ->
+handle_info({rpc, Code, ModName, Data}, State) ->
     {ok, NewState} = handle_rpc(Code, ModName, Data, State),
     %% 记取下条消息
     read_next(NewState),
     {noreply, NewState};
+%% 改变属性
+handle_info({attr, Param}, State) ->
+    {ok, NewState} = change_attr(Param, State),
+    {noreply, NewState};
+%% @doc 收到不效消息
+handle_info(_Info, State) ->
+    {noreply, State}.
+
 
 %% @doc 新一天数据更新
 handle_cast(newday, State = #role{user_id = RoleId}) ->
@@ -167,6 +176,7 @@ rpc(Pid, Code, ModName, Data) ->
 .
 
 handle_rpc(Code, ModName, Data, State = #role{link = #link{socket = Socket}}) ->
+    ?INFO("[role:rpc succ][code:~p]",[Code]),
     case ModName:handle(Code, Data, State) of
         {ok, _} ->
             {ok, State};
@@ -188,6 +198,28 @@ disconnect(Pid) ->
     Pid ! disconnect
 .
 
-send_data(Pid, Msg) ->
+%% 外部直接打包信息
+send(Pid, Msg) ->
     Pid ! {send_data, Msg}
+.
+
+%% 函数内部打包消息并发送
+send(Pid, Code, Msg) ->
+    case mapping:module(game_server, Code) of
+        {ok, _, _, Parser, _} ->
+            {ok, Bin} = Parser:pack(srv, Code, Msg),
+            Pid ! {send_data, Bin};
+        _ ->
+            ?INFO("[role:send error][code:~p]",[Code])
+    end
+.
+
+%% 改变玩家属性
+-spec change_attr(tuple(), #role{}) -> {ok, #role{}}.
+change_attr({pos, X, Y}, Role) ->
+    R = Role#role{scene = #pos{scene_x = X, scene_y = Y}},
+    {ok, R};
+change_attr(Param, Role) ->
+    ?INFO("[role:change_attr error][type:~p]",[Param]),
+    {ok, Role}
 .

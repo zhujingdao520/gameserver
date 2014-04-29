@@ -142,3 +142,7 @@ upmap(F, L) ->
 %     ok.
 
 
+test_put() ->
+  put(1, {10}).
+test_get() ->
+  get(1).

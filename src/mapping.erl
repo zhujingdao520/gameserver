@@ -30,8 +30,8 @@
 module(Type, Cmd) -> code(Type, trunc(Cmd / 100)).
 
 %% 游戏服务器协议映射
-code(game_server, 10) -> {ok, false, connector, proto_10, client_rpc_open};
 code(game_server, 11) -> {ok, true,  connector, proto_11, client_rpc};
+code(game_server, 10) -> {ok, false, object,    proto_10, logic_rpc};
 code(game_server, 98) -> {ok, true,  object,    proto_98, misc_rpc};
 code(game_server, 99) -> {ok, true,  object,    proto_99, misc_rpc};
 code(game_server, 20) -> {ok, true,  object,    proto_20, role_rpc};
@@ -56,30 +56,30 @@ code(game_server, 42) -> {ok, true,  object,    proto_42, boss_rpc};
 code(game_server, 46) -> {ok, true,  object,    proto_46, pet_rpc};
 
 %% 测试器协议映射
-code(tester, 10) -> {ok, proto_10, test_client_rpc_open};
-code(tester, 11) -> {ok, proto_11, test_client_rpc};
-code(tester, 99) -> {ok, proto_99, test_misc_rpc};
-code(tester, 98) -> {ok, proto_98, test_misc_rpc};
-code(tester, 20) -> {ok, proto_20, test_role_rpc};
-code(tester, 21) -> {ok, proto_21, test_map_rpc};
-code(tester, 22) -> {ok, proto_22, test_quest_rpc};
-code(tester, 23) -> {ok, proto_23, test_item_rpc};
-code(tester, 24) -> {ok, proto_24, test_chat_rpc};
-code(tester, 25) -> {ok, proto_25, test_blacksmith_rpc};
-code(tester, 26) -> {ok, proto_26, test_reward_rpc};
-code(tester, 27) -> {ok, proto_27, test_combat_rpc};
-code(tester, 28) -> {ok, proto_28, test_sns_rpc};
-code(tester, 29) -> {ok, proto_29, test_guild_rpc};
-code(tester, 30) -> {ok, proto_30, test_rank_rpc};
-code(tester, 31) -> {ok, proto_31, test_dungeon_rpc};
-code(tester, 32) -> {ok, proto_32, test_hall_rpc};
-code(tester, 34) -> {ok, proto_34, test_honor_rpc};
-code(tester, 38) -> {ok, proto_38, test_plot_rpc};
-code(tester, 39) -> {ok, proto_39, test_store_rpc};
-code(tester, 40) -> {ok, proto_40, test_shop_rpc};
-code(tester, 41) -> {ok, proto_41, test_reward_task_rpc};
-code(tester, 42) -> {ok, proto_42, test_boss_rpc};
-code(tester, 46) -> {ok, proto_46, test_pet_rpc};
+code(tester, 10) -> {ok, proto_10, test_rpc};
+code(tester, 11) -> {ok, proto_11, test_rpc};
+code(tester, 99) -> {ok, proto_99, test_rpc};
+code(tester, 98) -> {ok, proto_98, test_rpc};
+code(tester, 20) -> {ok, proto_20, test_rpc};
+code(tester, 21) -> {ok, proto_21, test_rpc};
+code(tester, 22) -> {ok, proto_22, test_rpc};
+code(tester, 23) -> {ok, proto_23, test_rpc};
+code(tester, 24) -> {ok, proto_24, test_rpc};
+code(tester, 25) -> {ok, proto_25, test_rpc};
+code(tester, 26) -> {ok, proto_26, test_rpc};
+code(tester, 27) -> {ok, proto_27, test_rpc};
+code(tester, 28) -> {ok, proto_28, test_rpc};
+code(tester, 29) -> {ok, proto_29, test_rpc};
+code(tester, 30) -> {ok, proto_30, test_rpc};
+code(tester, 31) -> {ok, proto_31, test_rpc};
+code(tester, 32) -> {ok, proto_32, test_rpc};
+code(tester, 34) -> {ok, proto_34, test_rpc};
+code(tester, 38) -> {ok, proto_38, test_rpc};
+code(tester, 39) -> {ok, proto_39, test_rpc};
+code(tester, 40) -> {ok, proto_40, test_rpc};
+code(tester, 41) -> {ok, proto_41, test_rpc};
+code(tester, 42) -> {ok, proto_42, test_rpc};
+code(tester, 46) -> {ok, proto_46, test_rpc};
 
 %% 未知编号
 code(Type, Code) -> {error, {unknow_mapping, Type, Code}}.

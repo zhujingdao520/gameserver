@@ -119,7 +119,8 @@ role_enter(MapID, X, Y, Role) ->
         {ok, Map} ->
             case role_condition:check(Map#map.condition, Role) of
                 true ->
-                    {ok, NewRole} = do_enter(X, Y, Map, Role);
+                    {ok, NewRole} = do_enter(X, Y, Map, Role),
+                    {ok, NewRole};
                 {false, Reason} ->
                     ?INFO("[map_mgr:role_enter Error][reason:~p]", Reason),
                     {error, Reason}
@@ -162,27 +163,27 @@ role_levae(Role = #role{scene = #pos{scene_id = Scene_id, scene_x = X, scene_y =
             %% 记录last 场景信息
             NewRole1  = Role#role{scene = #pos{last = #pos_history{scene_id = Scene_id, scene_x = X, scene_y = Y}}},
             %% 离开场景
-            map:leave(Map#map.pid, NewRole1#role.pid),
+            map:leave(role, Map#map.pid, NewRole1#role.pid),
             {ok, NewRole1};
         _ ->
             ?INFO("[map_mgr:role_levae Scene_Not_Exist][user[~p ~p] scene_id:~p]"
                 ,[Role#role.user_id, Role#role.name, Scene_id]),
             {ok, Role}
-    end
+    end,
     {ok, NewRole}
 .
 
-%% @doc 离开场景
-do_leave() ->
+% %% @doc 离开场景
+% do_leave() ->
 
-    ok
-.
+%     ok
+% .
 
-%% @doc 移动
-do_move() ->
+% %% @doc 移动
+% do_move() ->
 
-    ok
-.
+%     ok
+% .
 
 %% 创建主场景
 create_startup([]) ->
@@ -192,7 +193,7 @@ create_startup([BaseID|Tail]) ->
         {error, _} ->
             ?INFO("[create Error][地图[map_id:%~w]不存在]",[BaseID]);
         {ok, #map_data{id = ID, name = Name,condition = Cond
-             ,width = Width,height = Heigth ,revive = Revive
+             ,width = Width,height = Heigth ,revive = _Revive
             }} ->
 
             Map = #map{
@@ -223,7 +224,7 @@ init([]) ->
 .
 
 %% @doc 获得场景动态ID
-handle_call(fetch_id, _From, State = #state{next_id = NextId}) ->
+handle_call(fetch_id, _From, #state{next_id = NextId}) ->
     NewState = #state{next_id = NextId + 1 },
     {reply, NextId + 1,NewState};
 handle_call(_Request, _From, State) ->

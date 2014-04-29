@@ -7,6 +7,7 @@
 start(_Type, _StartArgs) ->
     erl_store:init(),
     env:start_link(),
+    keypool:start_link(),
     case erl_sup:start_link() of
         {ok, Pid} ->
             erl_logger_msg:add_handler(),

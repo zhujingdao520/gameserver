@@ -7,12 +7,12 @@
 -include("common.hrl").
 
 -spec to(atom(), #role{}) -> #map_role{}.
-to(map_role,Role) ->
+to(map_role, Role) ->
     MapRole = #map_role{
         pid = Role#role.pid
         ,rid = Role#role.user_id
-        ,platform_id = env:get(platform)
-        ,zone_id = env:get(zone_id)
+        ,platform_id = env:get_cnf(platform)
+        ,zone_id = env:get_cnf(zone_id)
         ,name = Role#role.name
         ,conn_pid = Role#role.link#link.pid
         ,map = 0

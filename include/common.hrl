@@ -47,6 +47,9 @@
 %% 自定义类型:单位ID
 -type unit_id() :: {pos_integer(), pos_integer()}.
 
+%% 默认进入场景{场景ID, X, Y}
+-define(MAIN_CITY, {1, 11, 11}).
+
 %% 中央服信息数据结构
 -record(center, {
         % 标识中央服是否连接
