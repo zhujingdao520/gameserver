@@ -83,6 +83,7 @@ handle(1016, Param, State) ->
 
 %% 新角色加入九宫中
 handle(1013, Param, State) ->
+    tester:cmd(move, test_rpc, {State#tester.x +10, State#tester.y + 10, 0}),
     ?INFO("[test_rpc:handle new_role_join[~p]]",[Param]),
     {ok, State};
 handle(1032, Param, State) ->

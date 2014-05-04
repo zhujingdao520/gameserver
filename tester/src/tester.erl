@@ -29,6 +29,7 @@
                                         %% 存在队列，等待可写时才把消息发送出去
                 ]).
 
+-define(POS_POOL, {}).
 
 -include("common.hrl").
 -include("tester.hrl").
@@ -169,6 +170,9 @@ handle_info({inet_async, _Socket, _Ref, {ok, _Bin}}, State) ->
 handle_info({cmd, Cmd, Obj, Param}, State) ->
     {ok, NewState} = Obj:handle(Cmd, Param, State),
     {noreply, NewState};
+handle_info({move}, State) ->
+
+    {noreply, State};
 handle_info(Info, State) ->
     ?INFO("[Info:~p]",[Info]),
     {noreply, State}
