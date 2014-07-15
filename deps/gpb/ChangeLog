@@ -1,0 +1,163 @@
+-*- coding: utf-8 -*-
+
+Version 3.9
+2014-feb-04
+
+	* Avoid single field map access---ie expressions on the form
+	X#{key}---since neither the maps pre-release, nor the rc1 of R17
+	supports it. Use matching to access such fields instead. This
+	applies to records as well as maps. Performance is unaltered.
+
+Version 3.8
+2014-feb-01
+
+	* Bugfix generated code when there are no messages defined.
+	Thanks to Graham Crowe for reporting.
+	* Add possibility to suffix message/record and names and module
+	names.
+
+Version 3.7.1
+2013-dec-14
+
+	* Bugfix a race condition in the Makefile. Thanks to Graham Crowe
+	for fruitful discussions.
+	* Rework the workaround for the bug in the syntax_tools in R16B03,
+	so that the code that uses the parse transform need not change.
+	Handle the odd case entirely in the parse transform.
+
+Version 3.7
+2013-dec-13
+
+	* Add a (GNU) Makefile, for projects that prefer to build this
+	way. Thanks to Graham Crowe for suggestions and ideas.
+	* Rework/fix the substitution in gpb_version.hrl.
+	* Add support for Erlang/OTP R16B03, by working around a
+	bug in syntax_tools (reversion of local implicit funs).
+	* Change the months in this file, from numeric to 3-letters, to
+	avoid ambiguities with different ways of writing dates in various
+	parts of the world.
+
+Version 3.6
+2013-nov-13
+
+	* Add nif support for the strings_as_binaries (-strbin) option,
+	thanks to Louis-Philippe Gauthier for reporting this.
+	* Add an is_binary guard to the top-level generated decode_msg/2
+	function. Thanks to Klas Johansson for suggesting this.
+
+Version 3.5
+2013-oct-27
+
+	* Licence change: from LGPL 2 to LGPL 2.1
+
+Version 3.4
+2013-oct-27
+
+	* Licence modification/clarification: clarify that the licence (in
+	the file COPYING.LIB) does not cover code generated with gpb.
+
+Version 3.3
+2013-oct-27
+
+	* Fix several errors in the gpb.app.src so that it works with
+	Elixir and Relex, thanks to Paulo Almeida.
+	* When decoding, reject messages with invalid varints.
+	Invaid varints are encoded with too many bits. Previously,
+	decoding a varint with very many bits (ie: with very many leading
+	bytes > 128) would cause the Erlang VM to construct a very large
+	number when decoding the varint. This would cause the Erlang VM to
+	use excessive cpu resources and could eventually cause the Erlang
+	VM to run out of memory. Now parsing fails immediately reading too
+	many varint bits.
+	* Fix a bug when generating code for maps.
+	* Teach the benchmarks to do maps, and also improve
+	various other benchmark related things.
+
+Version 3.2
+2013-sep-16
+
+	* Add preliminary support for maps, for generating code that
+	encodes from and decodes to maps, as well as merges and verifies
+	maps. The maps support is experimental.
+	* Bugfix verification of integers: the wrong error reason could be
+	generated for integers out of range.
+	* Bugfix various dialyzer issues.
+
+Version 3.1
+2013-sep-05
+
+	* Bugfix compilation of several files (only the first file
+	was actually compiled, even if several files were specified)
+	* Add possibility to generate and encode a descriptor, which is a
+	self-describing byte-blob according to descriptor.proto.
+	* Add possibility to make the generated code compile-time
+	independent of gpb by generating the introspection information to
+	proplists instead of to #field{} records. The latter required
+	including gpb.hrl at compiletime. (There's no run-time dependency)
+	* Add possibility to prefix message/record and names and module
+	names to avoid name collisions.
+	* Add -type to the commad line options, thanks to Louis-Philippe
+	Gauthier. Previously it existed only as an Erlang API option.
+
+Version 3.0
+2013-aug-24
+	* Improve decoding performance by roughly 8--19%
+	* Completely rewrite the code generator. Use a parse-transform
+	  instead of formatting and assembling strings.
+	* Minor improvement in the generated code for version_as_list.
+
+Version 2.3
+2013-aug-18
+	* Fix Rebar compile on non-GNU systems, such as Mac OS X, thanks
+	to Everton Ribeiro
+	* Bugfix (mostly) rare compilation breakage: depending on the
+	date/time of generation, a new-line was inserted, causing a
+	compilation error.
+	* Ignore non-version-like tags
+
+Version 2.2
+2013-jul-13
+
+	* Wrap generated skip-functions with quotes. Thanks to jesse-ad.
+	* Experimental support for calling protoc code via a NIF
+	* Empty lists are now default values for repeated fields. Thanks
+	to Martin Donath.
+	* New option, use_packages for prepending the package name found
+	in the proto file, to the message names. Thanks to Martin Donath.
+	* New option: strings_as_binaries (-strbin), for returning strings
+	as binaries. Thanks to Lars Thorsen for suggesting this option.
+	* New option: {o_erl,Dir} (-o-erl Dir), {o_hrl,Dir} (-o-hrl Dir)
+	and {o_nif_cc,Dir} (-o-nif-cc Dir) to specify destination
+	directory by file type. Thanks to Patrik Sandahl for suggesting
+	those options.
+	* New option: include_as_lib (-il) to include gpb.hrl as a
+	library. This makes it easier to integrate with rebar. Thanks to
+	Martin Donath.
+	* Generate introspection functions for enum conversions:
+	M:enum_symbol_by_value/2, M:enum_value_by_symbol/2,
+	M:enum_symbol_by_value_<Enum>/1, M:enum_value_by_symbol_<Enum>/1;
+	thanks to Patrik Sandahl for suggesting those functions.
+	* Bugfix name resolution. Thanks to Heiner Bunjes for reporting
+	the bug. This prompted a major rewrite of the name resolution code
+	that was originally a quick patch-work, and not in very good shape.
+	* Handle C-style comments. Thanks to Patrik Sandahl for reporting
+	this bug.
+	* Add a section to the README.md showing rebar integration, thanks
+	to Bin Wang for asking the question that prompted me to write it
+	up.
+	* Bugfix command line option parsing using the -extra alternative.
+	* Benchmark code improvements.
+	* Build: version number: defined format and enforced/verified
+	consistency between gpb_version.hrl and src/gpb.app.src: using the
+	git tag as the source of information.
+
+Version 2.1
+2011-oct-31  Tomas Abrahamsson  <tomas.abrahamsson@gmail.com>
+
+	* Package names are dotted rather than with underscores
+	* New generated introspection function: M:get_package_name/0.
+
+Version 2.0
+2011-jul-10  Tomas Abrahamsson  <tab@lysator.liu.se>
+
+	* First public version
