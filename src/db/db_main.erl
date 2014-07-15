@@ -21,7 +21,7 @@ start() ->
 
     my:new_datasource(datasource, DS_def),
     ?INFO("[DB Init Success] [host:~p, port:~w database:~p, user:~p]",
-        [?TEST_SERVER_HOST_NAME, ?TEST_SERVER_PORT, ?TEST_DB_NAME, ?TEST_USER]),
+        [env:get_cnf(host), env:get_cnf(port), env:get_cnf(database), env:get_cnf(user)]),
     ok
 .
 

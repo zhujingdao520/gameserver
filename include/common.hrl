@@ -18,6 +18,8 @@
 -define(FALSE, 0).
 -define(TRUE, 1).
 
+% -include("proto.hrl").
+-define(SERVER_ID, 2).
 %% 语言翻译，返回给玩家的文本信息需要经过此宏的转换
 -define(T(Text), lang:get(Text)).
 
@@ -49,6 +51,9 @@
 
 %% 默认进入场景{场景ID, X, Y}
 -define(MAIN_CITY, {1, 11, 11}).
+
+%% 监听端口
+-define(PORT, 11006).
 
 %% 中央服信息数据结构
 -record(center, {

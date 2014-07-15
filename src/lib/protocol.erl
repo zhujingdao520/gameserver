@@ -21,6 +21,7 @@
         ,read_fields/2
         ,pack/2
         ,unpack/1
+        ,hex2bin/1
     ]
 ).
 
@@ -31,7 +32,7 @@ string_impl(Bin, Len) when is_binary(Bin) andalso is_integer(Len) ->
 
 %% @doc 读取一个字符串
 -spec string(binary()) -> {binary(), binary()}.
-string(<<L:16, Bin/binary>>) -> string_impl(Bin, L).
+string(<<L:16/little, Bin/binary>>) -> string_impl(Bin, L).
 
 %% @doc 读取一个无符号8位整数
 -spec int8(binary()) -> {integer(), binary()}.
@@ -47,11 +48,11 @@ int16(<<N:16/signed, Bin/binary>>) -> {N, Bin}.
 
 %% @doc 读取一个无符号16位整数
 -spec uint16(binary()) -> {non_neg_integer(), binary()}.
-uint16(<<N:16, Bin/binary>>) -> {N, Bin}.
+uint16(<<N:16/little, Bin/binary>>) -> {N, Bin}.
 
 %% @doc 读取一个有符号32位整数
 -spec int32(binary()) -> {integer(), binary()}.
-int32(<<N:32/signed, Bin/binary>>) -> {N, Bin}.
+int32(<<N:32/signed-little, Bin/binary>>) -> {N, Bin}.
 
 %% @doc 读取一个无符号32位整数
 -spec uint32(binary()) -> {non_neg_integer(), binary()}.
@@ -135,5 +136,21 @@ pack(Code, Data) ->
 unpack(Data) ->
      <<Size:32/little, Code:16/little, 0:16/little,
       Bin/binary>> = Data,
-      io:format("unpack[size:[~w] code:[~w] bin:[~w]]", [Size], [Code], [Bin]),
+      % io:format("unpack[size:[~w] code:[~w] bin:[~w]]", [Size], [Code], [Bin]),
       {ok, Bin}.
+
+
+h2b(Hex) when is_integer(Hex) ->
+    if
+        Hex >= $0 andalso Hex =< $9 -> Hex - $0;
+        Hex >= $a andalso Hex =< $f -> Hex - $a + 10;
+        Hex >= $A andalso Hex =< $F -> Hex - $A + 10
+    end.
+
+hex2bin(<<A:8, B:8, Rest/binary>>) ->
+    <<(h2b(A) * 16 + h2b(B)), (hex2bin(Rest))/binary>>;
+hex2bin(<<A:8>>) ->
+    <<(h2b(A))>>;
+hex2bin(<<>>) ->
+    <<>>.
+

@@ -5,8 +5,9 @@
 -include("role.hrl").
 -include("map.hrl").
 -include("common.hrl").
+-include("db_table.hrl").
 
--spec to(atom(), #role{}) -> #map_role{}.
+% -spec to(atom(), #role{}) -> #map_role{}.
 to(map_role, Role) ->
     MapRole = #map_role{
         pid = Role#role.pid
@@ -31,6 +32,34 @@ to(map_role, Role) ->
         },
     {ok, MapRole}
 ;
+to(db, UserDBData) ->
+    %% 玩家基本数据
+    UserTab = UserDBData#db_user_param.user_tab,
+    UserInfoTab = UserDBData#db_user_param.user_info_tab,
+    Role = #role{
+        user_id = UserTab#user_tab.id
+        ,name = UserTab#user_tab.user_name
+        % ,level = UserInfoTab#user_info_tab.role_level
+        ,exp = UserInfoTab#user_info_tab.exp
+        ,job = UserTab#user_tab.professional
+        ,sex = UserTab#user_tab.sex
+        ,coin = UserInfoTab#user_info_tab.coin
+        ,gold = UserInfoTab#user_info_tab.gold
+        ,vip_level = UserInfoTab#user_info_tab.vip_level
+        ,scene = #pos{
+            scene_id = UserTab#user_tab.scene_id
+            ,scene_key = UserTab#user_tab.scene_key
+            ,scene_x = UserTab#user_tab.scene_x
+            ,scene_y = UserTab#user_tab.scene_y
+            ,last = #pos_history{
+                scene_id        = UserTab#user_tab.last_scene_id
+                ,scene_x        = UserTab#user_tab.last_scene_x
+                ,scene_y        = UserTab#user_tab.last_scene_y
+                }
+            }
+        ,create_itme = UserTab#user_tab.create_itme
+    },
+    {ok, Role};
 
 %% 匹配失败
 to(Match, _Role) ->

@@ -24,94 +24,54 @@
     ,send/3
     ]).
 
-create([RoleId, Account, Plat_id, Zone_id, Link]) ->
-    gen_server:start_link({global, {role, RoleId, Plat_id, Zone_id}}, ?MODULE, [RoleId, Account, Plat_id, Zone_id, Link], []).
+create([RoleId, Account, Zone_id, Link]) ->
+    gen_server:start_link({global, {role, RoleId, Zone_id}}, ?MODULE, [RoleId, Account, Zone_id, Link], []).
 
 
-init([RoleId, Account, Plat_id, Zone_id, Link]) ->
+init([RoleId, Account, Zone_id, Link]) ->
     UserTab = db_logic:user_init(RoleId),
 
-    #user_tab{
-        user_id = ID
-        ,name = Name
-        ,job = Job
-        ,sex = Sex
-        ,platform = Platform
-        ,create_itme = Create_itme
-        ,scene_id = Scene_id
-        ,scene_key = Scene_key
-        ,scene_x = Scene_x
-        ,scene_y = Scene_y
-        ,last_scene_id = Last_scene_id
-        ,last_scene_key = _Last_scene_key
-        ,last_scene_x = Last_scene_x
-        ,last_scene_y = Last_scene_y
-        ,level = Level
-        ,exp = Exp
-        ,coin = Coin
-        ,gold = Gold
-        ,vip_level= VipLevel
-    } = UserTab,
-    if
-        Plat_id =:= Platform ->
-            %% 玩家基本数据
-            Role = #role{
-                pid = self()
-                ,user_id = ID
-                ,name = list_to_binary(Name)
-                ,level = Level
-                ,exp = Exp
-                ,job = Job
-                ,sex = Sex
-                ,coin = Coin
-                ,gold = Gold
-                ,vip_level = VipLevel
-                ,scene = #pos{
-                    scene_id = Scene_id
-                    ,scene_key = Scene_key
-                    ,scene_x = Scene_x
-                    ,scene_y = Scene_y
-                    ,last = #pos_history{
-                        scene_id        = Last_scene_id
-                        ,platform_id    = env:get_cnf(platform)
-                        ,zone_id        = env:get_cnf(zone_id)
-                        ,scene_x        = Last_scene_x
-                        ,scene_y        = Last_scene_y
-                        }
-                    }
-                ,platform = Platform
-                ,account = Account
-                ,zone_id = Zone_id
-                ,create_itme = Create_itme
-                ,skill_data = []
-                ,equip_data = []
-                ,knapsact = []
-                ,link = Link
-            },
+    %% 玩家基本数据
+    {ok, Role} = role_transform:to(db, UserTab),
+    NewRole = Role#role{
+        pid = self()
+        ,account = Account
+        ,zone_id = Zone_id
+        ,link = Link
+    },
 
-            process_flag(trap_exit, true),
-            link(Link#link.pid),
-            %% 通知客户端进入成功
-            role:send(self(), 1120, {1}),
+    process_flag(trap_exit, true),
+    link(Link#link.pid),
 
-            %% 玩家数据更新
-            erlang:send_after(330, self(), update),
+    %% 进行数据初始化
+    self() ! init,
 
-            %% log玩家登陆成功
-            ?INFO("[init Succ] [user_id:~p account:~p platform_id:~p zone_id:~p]",
-                [RoleId, Account, Plat_id, Zone_id]),
-            {ok, Role};
-        true ->
-            ?ERR("[init Error] [user_id:~p account:~p platform_id:~p zone_id:~p]",
-                [RoleId, Account, Plat_id, Zone_id]),
-            {normal, {}}
-    end
+    %% 玩家数据更新
+    erlang:send_after(330, self(), update),
+
+    ?INFO("[init Succ] [user_id:~p account:~p platform_id:~p zone_id:~p]",
+                [RoleId, Account, ?SERVER_ID, Zone_id]),
+    {ok, NewRole}
 .
 
 handle_call(_Request, _From, State) ->
     Reply = State,
     {reply, Reply, State}.
 
+handle_info(init, State = #role{user_id = UserID, name = Name, pid = Pid
+    , scene = #pos{scene_id = SceneID, scene_x = X, scene_y = Y}}) ->
+    %% 登陆成功
+    role:send(Pid, 1052, {0, SceneID, 0, SceneID, UserID, 3, 1, 1, 1, 1, Name}),
+    io:format("send succ:~p ~n",[1052]),
+    %% 玩家进入场景
+    role:send(Pid, 1251, {2,0,1,94,13,0}),
+    io:format("send succ:~p ~n",[1251]),
+
+    % role:send(Pid, 1263, {SceneID, UserID, 10, 7, 0, 0, 59, 769, 64, 15
+    %     %% mount_level
+    %     , 6, 0, 15, 1, 1, 1, 1024, 3000, 91, 64, 0, 0, 0, 0, 0, 0, 0, <<"1">>}),
+
+    {noreply, State};
 %% @doc 连接器进程异常退出
 handle_info({'Exit', _Pid, _Reason}, State) ->
     ?INFO("[handle_info role_exit]"),
@@ -119,7 +79,6 @@ handle_info({'Exit', _Pid, _Reason}, State) ->
 
 %% @doc 玩家数据更新
 handle_info(update, State = #role{user_id = _RoleId}) ->
-    % ?INFO("[handle_info update][user_id:~p]", [RoleId]),
     erlang:send_after(330, self(), update),
     {noreply, State};
 
@@ -133,6 +92,7 @@ handle_info({send_data, Msg}, State = #role{link = #link{pid = Pid}}) ->
 handle_info({rpc, Code, ModName, Data}, State) ->
     {ok, NewState} = handle_rpc(Code, ModName, Data, State),
     %% 记取下条消息
+
     read_next(NewState),
     {noreply, NewState};
 %% 改变属性
@@ -175,11 +135,12 @@ rpc(Pid, Code, ModName, Data) ->
     Pid ! {rpc, Code, ModName, Data}
 .
 
-handle_rpc(Code, ModName, Data, State = #role{link = #link{socket = Socket}}) ->
-    ?INFO("[role:rpc succ][code:~p]",[Code]),
+handle_rpc(Code, ModName, Data, State = #role{user_id = RoleId, link = #link{socket = Socket},
+    scene = #pos{map_pid = MapPid}}) ->
+    ?INFO("[role:rpc succ][role_id:~p code:~p map_pid:~p]",[RoleId, Code, MapPid]),
     case ModName:handle(Code, Data, State) of
-        {ok, _} ->
-            {ok, State};
+        {ok, NewState} ->
+            {ok, NewState};
         %% 同步state 不需要回复客户端
         {sync, NewState} ->
             {ok, NewState};
@@ -216,8 +177,8 @@ send(Pid, Code, Msg) ->
 
 %% 改变玩家属性
 -spec change_attr(tuple(), #role{}) -> {ok, #role{}}.
-change_attr({pos, X, Y}, Role) ->
-    R = Role#role{scene = #pos{scene_x = X, scene_y = Y}},
+change_attr({pos, X, Y}, Role = #role{scene = Pos}) ->
+    R = Role#role{scene = Pos#pos{scene_x = X, scene_y = Y}},
     {ok, R};
 change_attr(Param, Role) ->
     ?INFO("[role:change_attr error][type:~p]",[Param]),

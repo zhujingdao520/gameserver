@@ -27,10 +27,10 @@
     Parser      :: atom(),
     ModName     :: atom(),
     Reason      :: term().
-module(Type, Cmd) -> code(Type, trunc(Cmd / 100)).
-
+module(Type, Cmd) -> code(Type, trunc(11)).
+% module(Type, Cmd) -> code(Type, trunc(Cmd / 100)).
 %% 游戏服务器协议映射
-code(game_server, 11) -> {ok, true,  connector, proto_11, client_rpc};
+code(game_server, 11) -> {ok, true,  connector, proto, client_rpc};
 code(game_server, 10) -> {ok, false, object,    proto_10, logic_rpc};
 code(game_server, 98) -> {ok, true,  object,    proto_98, misc_rpc};
 code(game_server, 99) -> {ok, true,  object,    proto_99, misc_rpc};
@@ -57,7 +57,7 @@ code(game_server, 46) -> {ok, true,  object,    proto_46, pet_rpc};
 
 %% 测试器协议映射
 code(tester, 10) -> {ok, proto_10, test_rpc};
-code(tester, 11) -> {ok, proto_11, test_rpc};
+code(tester, 11) -> {ok, proto, test_rpc};
 code(tester, 99) -> {ok, proto_99, test_rpc};
 code(tester, 98) -> {ok, proto_98, test_rpc};
 code(tester, 20) -> {ok, proto_20, test_rpc};

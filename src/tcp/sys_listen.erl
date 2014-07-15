@@ -17,13 +17,12 @@
 
 -include("common.hrl").
 -record(state, {}).
--define(LISTEN_PORT, 5200).
 
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
-    case gen_tcp:listen(?LISTEN_PORT, [
+    case gen_tcp:listen(?PORT, [
             binary
             ,{packet, 0}
             ,{active, false}
@@ -37,9 +36,9 @@ init([]) ->
         {ok, LSocket} ->
             start_accept(4, LSocket);
         {error, Reson} ->
-            io:format("[Listen Error] [Reson:~w prot:~w]",[Reson, ?LISTEN_PORT])
+            io:format("[Listen Error] [Reson:~w prot:~w]",[Reson, ?PORT])
      end,
-    ?INFO("[Listen Success] [prot:~w]", [?LISTEN_PORT]),
+    ?INFO("[Listen Success] [prot:~w]", [?PORT]),
     {ok, #state{}}.
 
 handle_call(_Request, _From, State) ->

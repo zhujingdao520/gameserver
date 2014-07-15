@@ -137,11 +137,18 @@ handle_info({role_enter, MapRole}, Map) ->
             %% 更新场景信息
             sync(NewMap1),
 
+            % Proto = #'EnterMap'{mapid = Map#map.id, ploat_id = MapRole#map_role.platform_id
+            %     ,zone_id = MapRole#map_role.zone_id},
+            % Proto_bin = proto:encode_msg(Proto),
             %% 通知客户端玩家进入场景
-            {ok, Bin} = proto_10:pack(srv, 1020, {Map#map.id, MapRole#map_role.platform_id
+            % Bin = protocol:pack(1020, Proto_bin),
+            {ok, Bin} = proto:pack(srv, 1020,{Map#map.id, MapRole#map_role.platform_id
                 , MapRole#map_role.zone_id}),
             role:send(MapRole#map_role.pid, Bin),
 
+            %% 玩家进入场景成功
+            role:send(MapRole#map_role.pid, 1251, {Map#map.id, 0, 1, MapRole#map_role.x, MapRole#map_role.y,0}),
+            io:format("send succ:~p ~n",[1251]),
             %% 把场景其他单位信息发给客户端
 
             {ok, NewMap1};

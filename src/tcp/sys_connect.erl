@@ -10,9 +10,11 @@
         terminate/2,
         code_change/3
         ]).
+
 %% api
 -export([create/1,
-        call/5
+        call/5,
+        sends/3
         ]).
 
 -include("common.hrl").
@@ -50,6 +52,7 @@ handle_info({inet_async, Socket, _Ref, {ok, <<Len:32/little>>}}, State) ->
 
 %% 收到正常数据
 handle_info({inet_async, _Socket, _Ref, {ok, <<Code:16/little, _Pad:16/little, Bin/binary>>}}, State) ->
+    ?INFO("[sys_connect:handle_info succ][code:~p]", [Code]),
     {ok, NewState} = case routing(Code, Bin, State) of
         {ok, NewState1} -> {ok, NewState1};
         {error, _Reason} -> {ok, State}
@@ -83,7 +86,6 @@ terminate(_Reson, State = #conn{account = Account,
             address = Address, port = Port, obj_pid = undefined}) ->
     ?INFO("[terminate socket_exit] [Acc:~s IP:~p port:~p]"
         , [Account, Address, Port]),
-    ?INFO("pid:undefined"),
     {normal, State};
 terminate(_Reson, State = #conn{account = Account, socket = Socket
             ,address = Address, port = Port, obj_pid = Pid}) ->
@@ -102,10 +104,8 @@ code_change(_Oldvsn, State, _Extra) ->
 %% ------------------------------------
 %% 私有函数
 %% ------------------------------------
-
 %% 路由处理(处理分包逻辑)
 routing(Code, Bin, State) ->
-    ?INFO("[sys_connect:routing succ][code:~p]",[Code]),
     case mapping:module(game_server, Code) of
         {ok, _NeedAuth, Caller, Parser, ModName} ->
             case Parser:unpack(srv, Code, Bin) of
@@ -123,7 +123,7 @@ routing(Code, Bin, State) ->
 
 call(connector, Code, ModName, Data, State = #conn{socket = Socket}) ->
     ?INFO("[call_connector Succ] [code:~w data:~p modname:~p]"
-            ,[Code, Data, ModName]),
+            ,[Code, [], ModName]),
     case ModName:handle(Code, Data, State) of
         {ok, _} ->
             {ok, State};
@@ -139,11 +139,11 @@ call(connector, Code, ModName, Data, State = #conn{socket = Socket}) ->
             ?ERR("[call Connector_Error][reason:~w]",[Reason]),
             {ok, State}
     end;
-call(object, _Code, _ModName, _Data, State = #conn{object = undefined}) ->
-    ?INFO("[sys_connect:call not_find_object]"),
+call(object, Code, _ModName, _Data, State = #conn{object = undefined}) ->
+    ?INFO("[sys_connect:call not_find_object][code:~p]",[Code]),
     {ok, State};
-call(object, _Code, _ModName, _Data, State = #conn{obj_pid = undefined}) ->
-    ?INFO("[sys_connect:call not_find_obj_pid]"),
+call(object, Code, _ModName, _Data, State = #conn{obj_pid = undefined}) ->
+    ?INFO("[sys_connect:call not_find_obj_pid][code:~p]", [Code]),
     {ok, State};
 call(object, Code, ModName, Data, State = #conn{object = Object, obj_pid = Pid}) ->
      Object:rpc(Pid, Code, ModName, Data),
@@ -161,6 +161,19 @@ send(Code, Data, Socket) ->
             end;
         {error,Reason} ->
             ?ERR("[send error] [code:~w reason:~w]",[Code, Reason])
+    end.
+
+sends(Socket, MsgType, Msg) ->
+    BinMsg = iolist_to_binary(Msg),
+    ?INFO("~p", [[Socket, send, MsgType, BinMsg]]),
+    PktLen = byte_size(BinMsg) + 4,
+    Data = <<PktLen:32/little, MsgType:16/little, 0:16/little, BinMsg/binary>>,
+    case erlang:port_command(Socket, Data) of
+        true ->
+            true;
+        false ->
+            ?ERR("send false ~p", [[Socket, MsgType, Msg]]),
+            false
     end.
 
 %% 读取包头大小

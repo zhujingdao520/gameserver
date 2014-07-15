@@ -11,7 +11,7 @@ start(_Type, _StartArgs) ->
     case erl_sup:start_link() of
         {ok, Pid} ->
             erl_logger_msg:add_handler(),
-            erl_logger_msg1:add_handler(),
+            % erl_logger_msg1:add_handler(),
             {ok, Pid};
         Other ->
             {error, Other}

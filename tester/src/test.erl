@@ -2,14 +2,19 @@
 -module(test).
 -compile([export_all]).
 
-start([Host, Port, _RoleID, _Platfrom, _Zoneid]) ->
-    keypool:start_link(),
-    tester:start_link(Host, Port)
+start() ->
+    application:start(test)
 .
 
 stop() ->
+    application:stop(test)
 
-    ok
 .
 
- % test:start(["localhost", 5200,1,1,1]).
+add(0) ->
+    ok;
+add(Num) ->
+    timer:sleep(1000),
+    test_sup:start_child(),
+    add(Num - 1).
+

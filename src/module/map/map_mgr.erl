@@ -123,7 +123,7 @@ role_enter(MapID, X, Y, Role) ->
                     {ok, NewRole};
                 {false, Reason} ->
                     ?INFO("[map_mgr:role_enter Error][reason:~p]", Reason),
-                    {error, Reason}
+                    {error, Role}
             end
     end,
     case Ret of
@@ -143,6 +143,7 @@ do_enter(X, Y, Map, Role) ->
                 scene_id = Map#map.id
                 ,scene_x = X
                 ,scene_y = Y
+                ,map_pid = Map#map.pid
                 }
     },
 

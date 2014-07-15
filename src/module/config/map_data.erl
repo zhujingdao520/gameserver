@@ -26,8 +26,8 @@ get(1 = Id) ->
         id = Id
         ,name = <<"瀛洲桃源">>
         ,condition = []
-        ,width = 120
-        ,height = 68
+        ,width = 125
+        ,height = 94
         ,revive = [
             {15, 56}
         ]

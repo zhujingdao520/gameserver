@@ -12,31 +12,20 @@
         ]).
 
 %% API
--export([start_link/2
-        ,cmd/3
-        ,send/2
-        ,create/0
+-export([start_link/0
+        ,cmd/4
+        ,send/3
     ]).
 
--define(OPERATION_TCP, [binary
-                ,{packet, 0}            %% tcp 原封不动的数据包发送出去
-                ,{active, false}
-                ,{exit_on_close, false} %% socket 关闭后缓冲数据还会发出去
-                ,{nodelay, false}       %% 少量数据也发送
-                ,{reuseaddr, true}      %% 地址是否可重用
-                ,{send_timeout, 15000}  %% 15000 收不到消息发出{error, timeout}
-                ,{delay_send, true}     %% 每个port 维护一个发送队列，消息都是
-                                        %% 存在队列，等待可写时才把消息发送出去
-                ]).
 
--define(POS_POOL, {}).
+-define(POS_POOL, {{30, 20}, {40, 30}, {50, 60}, {45, 56}, {80, 80}}).
 
 -include("common.hrl").
 -include("tester.hrl").
 
 
-start_link(Host, Port) ->
-    gen_server:start_link(?MODULE, [Host, Port], [])
+start_link() ->
+    gen_server:start_link(?MODULE, [], [])
 .
 
 %% 处理消息分派
@@ -52,16 +41,17 @@ call(Code, Rpc, Bin, State) ->
 .
 
 %% 上个包没有读取完成
-read_next(State = #tester{socket = Socket, read_head = false}) ->
-    prim_inet:async_recv(Socket, 4, -1), %% 记取包头
+read_next(State = #tester{socket = _Socket, read_head = false}) ->
+    % prim_inet:async_recv(Socket, 4, -1), %% 记取包头
+
     {noreply, State};
 read_next(State) ->
     {noreply, State}
 .
 
 %% 发送消息
-send(Code, Data) ->
-    Socket = get(socket),
+send(Code, Data, Socket) ->
+    % Socket = test_mgr:get_socket(),
     case mapping:module(tester, Code) of
         {ok, Parser, _Rpc} ->
             {ok, Bin} = Parser:pack(cli, Code, Data),
@@ -73,59 +63,79 @@ send(Code, Data) ->
 .
 
 %% 指令
-cmd(Cmd, Obj, Param) ->
-     %% ets 第一个数据及第一个字段
-    case ets:first(role) of
-        '$end_of_table' ->
-            cmd(self(), Cmd, Obj, Param);
-        RoleID ->
-            cmd(RoleID, Cmd, Obj, Param)
-    end
+cmd(Cmd, Obj, Param, State) ->
+    State#tester.pid ! {cmd, Cmd, Obj, Param}
 .
 
-cmd(Pid, Cmd, Obj, Param) when is_pid(Pid) ->
-    Pid ! {cmd, Cmd, Obj, Param};
-cmd(RoleID, Cmd, Obj, Param) ->
-    case ets:lookup(role, RoleID) of
-        [Tester] ->
-            cmd(Tester#tester.pid, Cmd, Obj, Param);
-        _ ->
-            ok
-    end
-.
-
-%% 创建新角色
-create() ->
-   tester:start_link("localhost", 5200)
-.
-
-% %% 单独登陆接口
-% login(RoleID, Platfrom, Zoneid) ->
-%      %% 基本信息
-%     State = #tester{
-%             id = RoleID
-%             ,platform_id = Platfrom
-%             ,zone_id = Zoneid
-%             ,socket = Socket
-%             ,pid = self()
-%             },
-%     tester:cmd(login, test_rpc, {}),
+% cmd(Pid, Cmd, Obj, Param) when is_pid(Pid) ->
+%     Pid ! {cmd, Cmd, Obj, Param};
+% cmd(RoleID, Cmd, Obj, Param) ->
+%     case ets:lookup(role, RoleID) of
+%         [Tester] ->
+%             cmd(Tester#tester.pid, Cmd, Obj, Param);
+%         _ ->
+%             ok
+%     end
 % .
+
+%% @doc 定时移动
+-spec move_loop(#tester{}, integer(), list()) -> {ok, #tester{}}.
+move_loop(State = #tester{pid = Pid, x = X, y = Y}, Index, Path) ->
+    NIndex = Index + 3,
+    Len = erlang:length(Path),
+    {NIndex1 ,NewPath1} = if
+        NIndex > Len ->
+            Rand = util:rand(1, erlang:size(?POS_POOL)),
+            {Des_x, Des_y} = erlang:element(Rand, ?POS_POOL) ,
+            NewPath = astar:start_find_path(1, X, Y, Des_x, Des_y),
+            {0, NewPath};
+        true ->
+            {TX, TY} = lists:nth(NIndex, Path),
+            tester:cmd(move, test_rpc, {TX, TY, 0}, State),
+            {NIndex ,Path}
+    end,
+    %% 1秒移动一次
+    erlang:send_after(500, Pid, {move_loop, NewPath1, NIndex1}),
+    {ok, State}.
+
 
 %% -----------------------------------------------------------------------------
 %% @回调用函数
 %% -----------------------------------------------------------------------------
-init([Host, Port]) ->
-    {ok, Socket} = gen_tcp:connect(Host, Port, ?OPERATION_TCP),
-    put(socket, Socket),
-    ets:new(role, [set, named_table, public, {keypos, #tester.id}]),
-
+init([]) ->
+    Socket = test_mgr:get_socket(),
     %% 基本信息
     State = #tester{socket = Socket, pid = self()},
     %% 请求创建角色
     Key = keypool:get_key(),
     Name = erlang:list_to_binary(lists:concat(["test", Key])),
-    tester:cmd(create, test_rpc, {Name, 1}),
+    % Param ={
+    %     1,% calendar:datetime_to_gregorian_seconds(calendar:local_time()),% uint32  login_time
+    %     1,% int32   plat_id
+    %     ?SERVER_ID,% int16   server_id
+    %     1,% int8    anti_wallow
+    %     1,% int8    avatar
+    %     1,% int8    profession
+    %     1,% int8    role_sex
+    %     1,% uint16  screen_width
+    %     1,% uint16  screen_height
+    %     50,% int32   package_size
+    %     erlang:list_to_binary("2253"),% <<"1">>,% string  pname
+    %     <<"1">>,% string  login_str
+    %     Name,% string  user_name
+    %     <<"1">>,% string  imei_number
+    %     <<"1">>,% string  imsi_number
+    %     <<"1">>,% string  qudao_number
+    %     <<"1">>,% string  app_number
+    %     <<"1">>,% string  user_phone
+    %     <<"1">>,% string  system_type
+    %     <<"1">>,% string  phone_model
+    %     <<"1">>,% string  plat_type
+    %     <<"1">>,% string  network_type
+    %     <<"1">>% string  package_name
+    % },
+    % tester:cmd(create, test_rpc, Param, State),
+    tester:send(1003, {18603, 2, <<"亓官安倰">>, <<"2">>}, Socket),
     read_next(State),
     ?INFO("[tester:init Succ]"),
     {ok, State}
@@ -173,6 +183,28 @@ handle_info({cmd, Cmd, Obj, Param}, State) ->
 handle_info({move}, State) ->
 
     {noreply, State};
+handle_info({tcp, _Socket, <<Len:32/little, Code:16/little, _:16/little, Bin/binary>>}, State) ->
+    ?INFO("[tester:recv Succ][code:~p]",[Code]),
+    {_, NewState} = case mapping:module(tester, Code) of
+        {ok, Parser, Rpc} ->
+            case Parser:unpack(cli, Code, Bin) of
+                {ok, Data} ->
+                    call(Code, Rpc, Data, State);
+                _ ->
+                    read_next(State)
+            end;
+        _ ->
+            read_next(State)
+    end,
+    {noreply, NewState};
+
+handle_info({tcp_closed, _Socket}, State) ->
+    ?INFO("[tester:handle_info tcp_closed]"),
+    {noreply, State};
+
+handle_info({move_loop, Path, Index}, State) ->
+    {ok, NewState} = move_loop(State, Index, Path),
+    {noreply, NewState};
 handle_info(Info, State) ->
     ?INFO("[Info:~p]",[Info]),
     {noreply, State}

@@ -134,6 +134,7 @@ do_move(MapRole = #map_role{rid = RoleId, platform_id = Platform, zone_id = Zone
     %% 通知移动包
     {ok, MoveMsg} = proto_10:pack(srv, 1032, {RoleId, Platform, Zoneid, 0, X1, Y1, X, Y}),
     ?CAST(NewGX, NewGY, MoveMsg),
+
     %% 更新玩家信息
     R = MapRole#map_role{x = X1, y = Y1},
     put({NewGX, NewGY}, lists:keyreplace(RoleId, #map_role.rid, get({NewGX, NewGY}), R));
@@ -343,7 +344,7 @@ handle_cast(_Request, State) ->
     {noreply, State}
 .
 
-handle_info({move, RoleId, SX, SY, TX, TY}, State) ->
+handle_info({role_move, RoleId, SX, SY, TX, TY}, State) ->
     GX = ?GX(SX),
     GY = ?GY(SY),
     MapRole = lists:keyfind(RoleId, #map_role.rid, get({GX, GY})),
@@ -353,7 +354,8 @@ handle_info({enter, GX, GY, MapRole}, State) ->
     %% 添加到格子
     put({GX, GY},[MapRole|get({GX, GY})]),
 
-    %% 九宫格的所有玩家信息通知给我
+    %% 九宫格的所有玩家信息通知给我,
+    %% 其中包含自己的信息，如果有优化可以把自己的信息删除掉
     RoleList = get_grid_role_list(GX, GY),
     {ok, Bin} = proto_10:pack(srv, 1016, {RoleList}),
     role:send(MapRole#map_role.pid, Bin),

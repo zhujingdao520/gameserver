@@ -34,7 +34,7 @@ handle(1030, {0,0,_}, Role = #role{scene = #pos{scene_id = MapID, scene_x = X
             {ok, Role}
     end;
 
-%% 请求进入场景
+%% 请求玩家场景数据
 handle(1031, _Param, Role = #role{user_id = RoleID, platform = Plat_id, zone_id = Zone_id
         , name = Name, level = Level, job= Classess, vip_level = VipLevel, coin = Coin
         , gold = Gold, speed = Speed, pid = Pid

@@ -23,7 +23,8 @@ init([]) ->
         {erl_event, {erl_event, start_link, []}, permanent, 2000, worker,[erl_event]},
         {sys_listen, {sys_listen, start_link, []}, permanent, 2000, worker,[sys_listen]},
         {role_create, {role_create, start_link, []}, permanent, 2000, worker, [role_create]},
-        {map_mgr, {map_mgr, start_link, []}, permanent, 2000, worker, [map_mgr]}
+        {map_mgr, {map_mgr, start_link, []}, permanent, 2000, worker, [map_mgr]},
+        {sys_rand, {sys_rand, start_link, []}, permanent, 2000, worker, [sys_rand]}
     ],
     {ok,{RestartStrategy, ChildSpec}}.
 
