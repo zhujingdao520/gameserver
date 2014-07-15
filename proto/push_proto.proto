@@ -1,0 +1,99 @@
+package com.shenhai.epush;
+
+option optimize_for = LITE_RUNTIME;
+
+
+// 为了方便使用，这里的名称要与消息名一样
+enum MsgType {
+	Login = 0; // 登录请求
+	LoginResp = 1; // 登录回复
+	SetAliasAndTags = 2; // 设置别名与标签请求
+	SetAliasAndTagsResp = 3; // 设置别名与标签回复
+	PushMsg = 4; // 推送消息请求
+	PushMsgResp = 5; // 推送消息回复
+	Report = 6; // 上报行为请求
+	ReportResp = 7; // 上报行为回复
+	GetInfo = 8; // 获取手机信息请求
+	GetInfoResp = 9; // 获取手机信息回复
+	HeartBeat = 15; // 发送心跳信号
+}
+
+message Login {
+	enum Platform {
+		ANDROID = 1;
+		IOS = 2;
+	}
+
+	required uint32 version = 1; // 客户端SDK版本
+	required string app_key = 2; // 应用标识，由后台生成
+	required string reg_id = 3; // 设备标识，取值顺序：reg_id -> device_id
+	required uint32 net_type = 4; // 网络类型
+	required string cell_info = 5; // 基站信息
+	optional uint32 account_id = 6 [default = 0]; // 账号ID
+	// 以下是首次登录时的注册信息
+	optional Platform platform = 7; // 手机平台
+	optional uint32 channel = 8; // 渠道ID
+	optional string pkg_name = 9; // 应用的包名、类名
+	optional string imei = 10;
+	optional string mac_addr = 11;
+	optional string android_id = 12;
+}
+
+message LoginResp {
+	required uint32 result = 1;
+	optional string reg_id = 2;
+	optional string alias = 3;
+	repeated string tags = 4;
+}
+
+message SetAliasAndTags {
+	optional string alias = 1;
+	repeated string tags = 2;
+}
+
+message SetAliasAndTagsResp {
+	required uint32 result = 1;
+}
+
+message PushMsg {
+	enum PushType {
+		NOTIFICATION = 1; // 通知
+		CUSTOM_MSG = 2; // 自定义消息
+	}
+
+	required uint32 seq_no = 1;
+	required string msg_id = 2;
+	required PushType push_type = 3;
+	required string content = 4;
+	optional string title = 5;
+	optional string extras = 6;
+	optional uint32 builder_id = 7;
+	optional string rich_push_url = 8;
+}
+
+message PushMsgResp {
+	required uint32 seq_no = 1;
+	required uint32 result = 2;
+}
+
+message Report {
+	required string msg_id = 1;
+	optional uint32 action = 2;
+}
+
+message ReportResp {
+	required uint32 result = 1;
+}
+
+message GetInfo {
+	required uint32 type = 1;
+	optional string parms = 2;
+}
+
+message GetInfoResp {
+	required uint32 type = 1;
+	required string result = 2;
+}
+
+message HeartBeat {
+}

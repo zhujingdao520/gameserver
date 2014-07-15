@@ -1,0 +1,282 @@
+
+package proto;
+
+// "请求创建角色"
+message CreateRole_1001{
+    required uint32  login_time     = 1;
+    required int32   plat_id        = 2;
+    required int16   server_id      = 3;
+    required int8    anti_wallow    = 4;
+    required int8    avatar         = 5;
+    required int8    profession     = 6;
+    required int8    role_sex       = 7;
+    required uint16  screen_width   = 8;
+    required uint16  screen_height  = 9;
+    required int32   package_size   = 10;
+    required string  pname          = 11;
+    required string  login_str      = 12;
+    required string  user_name      = 13;
+    required string  imei_number    = 14;
+    required string  imsi_number    = 15;
+    required string  qudao_number   = 16;
+    required string  app_number     = 17;
+    required string  user_phone     = 18;
+    required string  system_type    = 19;
+    required string  phone_model    = 20;
+    required string  plat_type      = 21;
+    required string  network_type   = 22;
+    required string  package_name   = 23;
+}
+
+// "回复创建角色"
+message CreateRole_1051{
+    required int16   result = 1;
+    required int32   user_id = 2;
+    required int8    avatar = 3;
+    required int8    profession = 4;
+    required uint16  level = 5;
+    required uint32  login_time = 6;
+    required int16   server_id = 7;
+    required int8    role_sex = 8;
+    required string  user_name = 9;
+    required string  login_str = 10;
+    required string  plat_ticket = 11;
+}
+
+// "请求登录角色"
+message Login_1002{
+    required int32   user_id = 1;
+    required uint32  login_time = 2;
+    required int8    anti_wallow = 3;
+    required int8    plat_id = 4;
+    required int16   server_id = 5;
+    required string  plat_name = 6;
+    required string  user_name = 7;
+    required string  login_str = 8;
+    required string  imei_number = 9;
+}
+
+// "回复登录角色"
+message Login_1052{
+    required int16   result = 1;
+    required int32   scene_id = 2;
+    required int32   scene_key = 3;
+    required int32   last_scene_id = 4;
+    required int32   user_id = 5;
+    required int8    avatar = 6;
+    required int8    professional = 7;
+    required uint8   level = 8;
+    required int8    anti_wallow = 9;
+    required int32   plat_id = 10;
+    required string  user_name = 11;
+}
+
+// "请求快速登录"
+message FastLogin_1003{
+    required int32   role_id = 1;
+    required int32   server_id = 2;
+    required string  role_name = 3;
+    required string  imei_number = 4;
+}
+
+// "请求切换场景"
+message TranformScene_1201{
+    required int16   scene_id = 1;
+    required int16   port_id = 2;
+    required int32   scene_key = 3;
+}
+
+// "回复/推送切换场景"
+message TranformScene_1251{
+    required int32   scene_id = 1;
+    required int16   scene_key = 2;
+    required int16   scene_state = 3;
+    required int16   pos_x = 4;
+    required int16   pos_y = 5;
+    required int32   special_logic_type = 6;
+}
+
+// "请求移动"
+message Move_1211{
+    required int16   x = 1;
+    required int16   y = 2;
+    required int16   tx = 3;
+    required int16   ty = 4;
+}
+
+// "推送移动消息"
+message Move_1261{
+    required int32   scene_id = 1;
+    required int32   user_id = 2;
+    required int16   x = 3;
+    required int16   y = 4;
+    required int16   tx = 5;
+    required int16   ty = 6;
+}
+
+// "推送重置场景位置"
+message ResetPos_1262{
+    required int32   scene_id = 1;
+    required int32   user_id = 2;
+    required int16   x = 3;
+    required int16   y = 4;
+}
+
+// "推送角色进入场景"
+message EnterScene_1263{
+    required int32   scene_id = 1;
+    required int32   user_id = 2;
+    required int8    user_level = 3;
+    required int8    dir = 4;
+    required int8    sex = 5;
+    required int8    profession = 6;
+    required int16   x = 7;
+    required int16   y = 8;
+    required int16   tx = 9;
+    required int16   ty = 10;
+    required int8    mount_level = 11;
+    required int8    mount_status = 12;
+    required int8    sit_status = 13;
+    required int8    vip_level = 14;
+    required int8    fabao_id = 15;
+    required int8    fabao_level = 16;
+    required int16   speed = 17;
+    required int32   fc = 18;
+    required int8    pk_mode = 19;
+    required int8    pk_state = 20;
+    required int8    action_state = 21;
+    required int8    beauty_level = 22;
+    required uint16  army_id = 23;
+    required int16   priv_type = 24;
+    required int32   priv_f1 = 25;
+    required int32   priv_f2 = 26;
+    required int16   priv_f3 = 27;
+    required string  game_name = 28;
+}
+
+// "推送角色离开场景"
+message LeaveScene_1264{
+    required int32   scene_id = 1;
+    required int32   user_id = 2;
+}
+
+// "推送角色状态改变"
+message ChectState_1265{
+    required int32   scene_id = 1;
+    required int32   user_id = 2;
+    required int32   key = 3;
+    required int32   value = 4;
+}
+
+// "推送怪物进入场景"
+message MonsterEnterMap_1266{
+    required int32   scene_id = 1;
+    required int8    type = 2;    // profession
+    required int8    dir = 3;
+    required int16   x = 4;
+    required int16   y = 5;
+    required int16   tx = 6;
+    required int16   ty = 7;
+    required int16   speed = 8;  // insect
+    required int32   id = 9;     // user_level
+    required int32   obj_id = 10;  // user_id
+    required int32   time = 11;   // sit_status
+    required int8    level = 12;  // mount_id
+    required int8    state = 13;  // mount_status
+    required int16   priv_type = 14;
+    required int32   priv_f1 = 15;
+    required int32   priv_f2 = 16;
+    required int16   priv_f3 = 17;
+    required string  name = 18;
+}
+
+// "推送怪物离开场景"
+message MonsterLeaveScene_1267{
+    required int32   scene_id = 1;
+    required int32   obj_id = 2;
+}
+
+// "请求玩家信息"
+message UserInfo_2001{
+}
+
+// "回复玩家信息"
+message UserInfo_2051{
+    required int32   user_id = 1;
+    required uint16  role_level = 2;
+    required int8    professional = 3;
+    required int8    sex = 4;
+    required int8    headpicture = 5;
+    required uint16  vip_level = 6;
+    required int32   scene_id = 7;
+    required int16   scene_x = 8;
+    required int16   scene_y = 9;
+    required uint32  coin = 10;
+    required uint32  gold = 11;
+    required uint32  speed = 12;
+    required uint32  gold_vip = 13;
+    required uint32  xinghun = 14;
+    required uint32  jiuli = 15;
+    required uint32  lingli = 16;
+    required uint32  silver = 17;
+    required uint32  score = 18;
+    required int8    pk_mode = 19;
+    required int8    pk_state = 20;
+    required int8    action_state = 21;
+    required string  role_name = 22;
+}
+
+// "回复玩家面板信息"
+message ROLE_DETAIL{
+    required int32   role_id = 1;
+    required uint16  role_level = 2;
+    required int8    role_type = 3;
+    required int8    professional = 4;
+    required uint16  sex = 5;
+    required uint16  headpicture = 6;
+    required uint32  hp = 7;
+    required uint32  nuqi = 8;
+    required uint32  first_hand = 9;
+    required uint32  attack = 10;
+    required uint32  defence = 11;
+    required int32   chuantourate = 12;
+    required int32   baojirate = 13;
+    required int32   kangbaorate = 14;
+    required int32   mingzhongrate = 15;
+    required int32   shanbirate = 16;
+    required int32   gedangrate = 17;
+    required int32   fc = 18;
+    required int32   wind = 19;
+    required int32   fire = 20;
+    required int32   water = 21;
+    required int32   soil = 22;
+    required uint32  experience = 23;
+    required uint32  experience_next = 24;
+    required uint32  army_id = 25;
+    required uint8   user_post = 26;
+    required uint8   army_level = 27;
+    required string  role_name = 28;
+    required string  army_name = 29;
+    message Equip{
+        required uint32  id = 1;
+        required uint16  quality = 2;
+        required uint16  zhanhun = 3;
+        required uint8   strength_num = 4;
+        required uint8   index = 5;
+        message BaoShi{
+            required int32   baoshi_id = 1;
+        }
+        repeated BaoShi baoshi_list = 6;
+        message  XiLian{
+            required uint8   attr_id = 1;
+            required uint8   star = 2;
+            required uint16  add_value = 3;
+        }
+        repeated XiLian xilian_list = 7;
+    }
+    repeated Equip equip = 30;
+}
+message RolePanel_2052{
+
+    repeated ROLE_DETAIL role_panel = 1;
+}
